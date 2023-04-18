@@ -2,7 +2,7 @@ const handler = async (event, responseStream, context) => {
   const responseMetadata = {
     statusCode: 200,
     headers: {
-      "Content-Type": "text/plain"
+      'Content-Type': 'text/plain'
     }
   }
 
@@ -16,4 +16,4 @@ const handler = async (event, responseStream, context) => {
   rStream.end()
 }
 
-module.exports.hello = awslambda.streamifyResponse(handler)
+export const hello = awslambda.streamifyResponse(handler)
