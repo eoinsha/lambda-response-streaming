@@ -1,0 +1,65 @@
+service: streamz
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: dev
+  region: eu-west-1
+
+functions:
+  # Function without response streaming
+  hello:
+    handler: handler.hello
+    timeout: 29
+    url:
+      invoke: buffered
+    events:
+      - httpApi:
+         path: /http-api
+         method: get
+      - http:
+         path: /rest-api
+         method: get
+
+  # Function with response streaming
+  helloStream:
+    handler: streaming-handler.hello
+    timeout: 29
+    url:
+      invoke: response_stream
+    events:
+      - httpApi:
+         path: /http-api-stream
+         method: get
+      - http:
+         path: /rest-api-stream
+         method: get
+
+resources:
+  Resources:
+    Distribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          PriceClass: PriceClass_All
+          HttpVersion: http2
+          IPV6Enabled: false
+          Origins:
+            - DomainName: !Select [2, !Split ["/", !GetAtt HelloStreamLambdaFunctionUrl.FunctionUrl ] ]
+              Id: LambdaOrigin
+              CustomOriginConfig:
+                HTTPSPort: 443
+                OriginProtocolPolicy: https-only
+          DefaultCacheBehavior:
+            TargetOriginId: LambdaOrigin
+            CachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad'  # Caching disabled
+            ViewerProtocolPolicy: redirect-to-https
+            SmoothStreaming: false
+            Compress: true
+  Outputs:
+    StreamingFunctionUrlDomain:
+      Value: !Select [2, !Split ["/", !GetAtt HelloStreamLambdaFunctionUrl.FunctionUrl ] ]
+    CloudFrontUrl:
+      Value: !Sub https://${Distribution.DomainName}/
